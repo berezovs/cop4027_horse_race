@@ -1,10 +1,13 @@
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+
+import java.util.ArrayList;
 
 
 public class HorseRace extends Application {
@@ -15,7 +18,7 @@ public class HorseRace extends Application {
         VBox root = new VBox();
 
         for (int i = 0; i < NUM_HORSES; ++i) {
-            root.getChildren().add(getHorseTracks());
+            root.getChildren().add(getHorseTrack());
         }
 
         root.getChildren().add(this.getButtonBar());
@@ -40,7 +43,7 @@ public class HorseRace extends Application {
         return new Button(buttonName);
     }
 
-    private Canvas getHorseTracks() {
+    private Canvas getHorseTrack() {
         return new Canvas(500, 50);
     }
 
@@ -48,6 +51,19 @@ public class HorseRace extends Application {
     public static void launch(int arg) {
         NUM_HORSES = arg;
         Application.launch();
+    }
+
+
+    private class Animate implements Runnable{
+        GraphicsContext gc = null;
+        Horse horse = null;
+    Animate(Horse horse, GraphicsContext gContext){
+
+    }
+        @Override
+        public void run() {
+
+        }
     }
 
 }
