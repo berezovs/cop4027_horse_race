@@ -5,6 +5,8 @@ public class Horse {
 
     Horse(String name) {
         this.name = name;
+        this.positionX = 0;
+        this.positionY = 0;
     }
 
     public String getName() {
