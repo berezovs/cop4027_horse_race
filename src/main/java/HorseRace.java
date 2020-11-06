@@ -13,6 +13,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -25,6 +26,7 @@ public class HorseRace extends Application {
     List<Thread> threads;
     Horse winner;
     boolean isRaceInProgress = false;
+    long startTime, endTime;
 
     @Override
     public void start(Stage stage) {
@@ -97,7 +99,7 @@ public class HorseRace extends Application {
             t.setDaemon(true);
             t.start();
         }
-
+        this.startTime = new Date().getTime();
     }
 
     private void interruptAllThreads() {
@@ -112,6 +114,7 @@ public class HorseRace extends Application {
             return;
         }
         try {
+            this.endTime = new Date().getTime();
             this.winner = horse;
             interruptAllThreads();
             isRaceInProgress = false;
@@ -126,10 +129,20 @@ public class HorseRace extends Application {
         Runnable dialog = () -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setHeaderText(null);
-            alert.setContentText("Winner: " + this.winner.getName());
+            alert.setContentText("Winner: " + this.winner.getName() + "\n" + this.getFormattedTimeInSeconds(this.startTime, this.endTime));
             alert.showAndWait();
         };
         Platform.runLater(dialog);
+    }
+
+    public String getFormattedTimeInSeconds(long start, long end) {
+        long timeMilisTotal = end - start;
+        long timeInSec = timeMilisTotal / 1000;
+        long timeMilis = timeMilisTotal % timeInSec;
+
+        String timeStr = "Time: " + timeInSec + " seconds, " + timeMilis + " milliseconds.";
+
+        return timeStr;
     }
 
     private class StartHandler implements EventHandler<ActionEvent> {
