@@ -1,7 +1,6 @@
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
@@ -11,7 +10,6 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -21,12 +19,13 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class HorseRace extends Application {
     private static int NUM_HORSES;
+    boolean isRaceInProgress = false;
+    long startTime, endTime;
     Lock lock = new ReentrantLock();
     List<Canvas> horseTracks;
     List<Thread> threads;
     Horse winner;
-    boolean isRaceInProgress = false;
-    long startTime, endTime;
+
 
     @Override
     public void start(Stage stage) {
@@ -78,12 +77,6 @@ public class HorseRace extends Application {
     public static void launch(int arg) {
         NUM_HORSES = arg;
         Application.launch();
-    }
-
-    private void clearHorseTracks() {
-        for (Canvas track : this.horseTracks) {
-            track.getGraphicsContext2D().clearRect(0, 0, track.getHeight(), track.getWidth());
-        }
     }
 
 
