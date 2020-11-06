@@ -1,9 +1,12 @@
 import javafx.application.Application;
-import javafx.collections.ObservableList;
-import javafx.scene.Node;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -11,24 +14,29 @@ import javafx.stage.Stage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class HorseRace extends Application {
     private static int NUM_HORSES;
-    private List<Canvas> horseTracks = null;
+    Lock lock = new ReentrantLock();
+    List<Canvas> horseTracks;
+    List<Thread> threads;
+    Horse winner;
+    boolean isRaceInProgress = false;
 
     @Override
     public void start(Stage stage) {
         VBox root = new VBox();
         horseTracks = new ArrayList<>();
+        threads = new ArrayList<>();
         for (int i = 0; i < NUM_HORSES; ++i) {
-
             Canvas c = getHorseTrack();
             root.getChildren().add(c);
             horseTracks.add(c);
         }
 
-        this.startRace(horseTracks);
         root.getChildren().add(this.getButtonBar());
         Scene scene = new Scene(root);
 
@@ -39,12 +47,19 @@ public class HorseRace extends Application {
         stage.sizeToScene();
         stage.show();
 
-
     }
 
     private HBox getButtonBar() {
         HBox buttonBar = new HBox();
-        buttonBar.getChildren().addAll(this.getButton("Start"), this.getButton("Reset"), this.getButton("Stop"));
+        Button start = this.getButton("Start");
+        Button reset = this.getButton("Reset");
+        Button stop = this.getButton("Stop");
+
+        start.setOnAction(new StartHandler());
+        stop.setOnAction(new StopHandler());
+        reset.setOnAction(new ResetHandler());
+
+        buttonBar.getChildren().addAll(start, reset, stop);
         buttonBar.setSpacing(15);
         return buttonBar;
     }
@@ -63,55 +78,144 @@ public class HorseRace extends Application {
         Application.launch();
     }
 
-
-    private void startRace(List<Canvas> horseTracks) {
-        Thread t;
-        Runnable contestant;
-        for (int i = 0; i < horseTracks.size(); ++i) {
-            Horse h = new Horse("Horse" + i);
-            contestant = new Animate(h, horseTracks.get(i).getGraphicsContext2D());
-            t = new Thread(contestant, "Thread "+ i);
-            t.start();
+    private void clearHorseTracks() {
+        for (Canvas track : this.horseTracks) {
+            track.getGraphicsContext2D().clearRect(0, 0, track.getHeight(), track.getWidth());
         }
     }
 
+
+    private void startRace(List<Canvas> horseTracks) {
+        this.threads.clear();
+        for (int i = 0; i < NUM_HORSES; i++) {
+            Runnable h = new Animate(new Horse("Horse " + (i + 1)), horseTracks.get(i).getGraphicsContext2D());
+            Thread t = new Thread(h);
+            threads.add(t);
+        }
+
+        for (Thread t : threads) {
+            t.setDaemon(true);
+            t.start();
+        }
+
+    }
+
+    private void interruptAllThreads() {
+        for (Thread t : threads) {
+            t.interrupt();
+        }
+    }
+
+    private void setWinner(Horse horse) {
+        lock.lock();
+        if (Thread.currentThread().isInterrupted()) {
+            return;
+        }
+        try {
+            this.winner = horse;
+            interruptAllThreads();
+            isRaceInProgress = false;
+            this.showWinner();
+
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void showWinner() {
+        Runnable dialog = () -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setHeaderText(null);
+            alert.setContentText("Winner: " + this.winner.getName());
+            alert.showAndWait();
+        };
+        Platform.runLater(dialog);
+    }
+
+    private class StartHandler implements EventHandler<ActionEvent> {
+        @Override
+        public void handle(ActionEvent actionEvent) {
+            if (isRaceInProgress)
+                return;
+            startRace(horseTracks);
+            isRaceInProgress = true;
+        }
+    }
+
+    private class ResetHandler implements EventHandler<ActionEvent> {
+
+        @Override
+        public void handle(ActionEvent actionEvent) {
+            interruptAllThreads();
+            startRace(horseTracks);
+        }
+    }
+
+    private class StopHandler implements EventHandler<ActionEvent> {
+        @Override
+        public void handle(ActionEvent actionEvent) {
+            Platform.exit();
+        }
+    }
+
+    public int getRandomNumber(int min, int max) {
+        return (int) ((Math.random() * (max - min)) + min);
+    }
+
     private class Animate implements Runnable {
-        GraphicsContext gc = null;
-        Horse horse = null;
+        int LENGTH_OF_TRACK = 450;
+        GraphicsContext gc;
+        Horse horse;
 
         Animate(Horse horse, GraphicsContext gContext) {
             this.horse = horse;
+            horse.setPositionX(0);
+            horse.setPositionY(0);
             this.gc = gContext;
         }
 
         @Override
         public void run() {
+            this.drawHorse();
 
-            while (this.horse.getPositionX() < 450){
+            while (this.horse.getPositionX() < LENGTH_OF_TRACK && !Thread.currentThread().isInterrupted()) {
                 try {
-                    gc.clearRect(0,0, 500, 50);
-                    this.drawHorse();
-                    this.moveHorse();
-                    System.out.println(Thread.currentThread().getName());
                     Thread.sleep(500);
+                    this.moveHorse();
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    return;
                 }
-        }
+            }
+            if (Thread.currentThread().isInterrupted()) {
+                return;
+            }
+            setWinner(this.horse);
         }
 
         public void drawHorse() {
-            this.gc.strokeRect(this.horse.getPositionX(), 5, 40, 25);
+            if (Thread.currentThread().isInterrupted()) {
+                System.out.println(Thread.currentThread().getName());
+                return;
+            }
+            Runnable draw = () -> {
+                gc.clearRect(0, 0, 500, 50);
+                gc.strokeRect(horse.getPositionX(), 5, 40, 25);
+            };
+            Platform.runLater(draw);
         }
 
         public void moveHorse() throws InterruptedException {
-            this.horse.setPositionX(this.horse.getPositionX() + getRandomNumber(20, 40));
+            this.drawHorse();
+            int distance = getRandomNumber(10, 30);
+            int currentPosition = this.horse.getPositionX();
+
+            //condition to ensure the horse doesn't move past the finish line
+            if (currentPosition + distance >= LENGTH_OF_TRACK)
+                distance = LENGTH_OF_TRACK - currentPosition;
+            this.horse.setPositionX(this.horse.getPositionX() + distance);
 
         }
 
-        public int getRandomNumber(int min, int max) {
-            return (int) ((Math.random() * (max - min)) + min);
-        }
 
     }
 
