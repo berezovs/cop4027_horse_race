@@ -60,6 +60,7 @@ public class HorseRace extends Application {
         stage.setTitle(WINDOW_NAME);
         stage.setScene(scene);
         stage.sizeToScene();
+        stage.setResizable(false);
         stage.show();
 
     }
@@ -172,6 +173,7 @@ public class HorseRace extends Application {
 
         @Override
         public void handle(ActionEvent actionEvent) {
+            isRaceInProgress = true;
             interruptAllThreads();
             startRace(horseTracks);
         }
