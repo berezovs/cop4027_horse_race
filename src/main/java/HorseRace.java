@@ -1,3 +1,9 @@
+/**
+ Student Name:Serghei Berezovschi
+ File Name:HorseRace.java
+ Project 3
+
+ */
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -26,12 +32,20 @@ public class HorseRace extends Application {
     List<Thread> threads;
     Horse winner;
 
+    //Launches the application
+    public static void launch(int arg) {
+        NUM_HORSES = arg;
+        Application.launch();
+    }
 
+
+    //builds the UI
     @Override
     public void start(Stage stage) {
         VBox root = new VBox();
         horseTracks = new ArrayList<>();
         threads = new ArrayList<>();
+
         for (int i = 0; i < NUM_HORSES; ++i) {
             Canvas c = getHorseTrack();
             root.getChildren().add(c);
@@ -50,14 +64,16 @@ public class HorseRace extends Application {
 
     }
 
+
+    //creates and returns a set of buttons
     private HBox getButtonBar() {
         HBox buttonBar = new HBox();
-        Button start = this.getButton("Start");
-        Button reset = this.getButton("Reset");
-        Button stop = this.getButton("Stop");
+        Button start = this.getButton("Start Race");
+        Button reset = this.getButton("Reset Race");
+        Button stop = this.getButton("Exit");
 
         start.setOnAction(new StartHandler());
-        stop.setOnAction(new StopHandler());
+        stop.setOnAction(new ExitHandler());
         reset.setOnAction(new ResetHandler());
 
         buttonBar.getChildren().addAll(start, reset, stop);
@@ -65,21 +81,19 @@ public class HorseRace extends Application {
         return buttonBar;
     }
 
+    //creates and returns a single button
     private Button getButton(String buttonName) {
         return new Button(buttonName);
     }
 
+
+    //creates and returns a 500x50 Canvas
     private Canvas getHorseTrack() {
         return new Canvas(500, 50);
     }
 
 
-    public static void launch(int arg) {
-        NUM_HORSES = arg;
-        Application.launch();
-    }
-
-
+    //creates all the runnables and threads, places all the threads into an array list and starts all the threads
     private void startRace(List<Canvas> horseTracks) {
         this.threads.clear();
         for (int i = 0; i < NUM_HORSES; i++) {
@@ -95,12 +109,14 @@ public class HorseRace extends Application {
         this.startTime = new Date().getTime();
     }
 
+    //interrupts all horse threads
     private void interruptAllThreads() {
         for (Thread t : threads) {
             t.interrupt();
         }
     }
 
+    //sets the winner of the race, class the method that displays all the results in a pop-up dialog
     private void setWinner(Horse horse) {
         lock.lock();
         if (Thread.currentThread().isInterrupted()) {
@@ -118,6 +134,7 @@ public class HorseRace extends Application {
         }
     }
 
+    //displays the results and statistics of race in a javafx dialog
     private void showWinner() {
         Runnable dialog = () -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -128,6 +145,7 @@ public class HorseRace extends Application {
         Platform.runLater(dialog);
     }
 
+    //returns the time of the winning horse as a string
     public String getFormattedTimeInSeconds(long start, long end) {
         long timeMilisTotal = end - start;
         long timeInSec = timeMilisTotal / 1000;
@@ -138,6 +156,7 @@ public class HorseRace extends Application {
         return timeStr;
     }
 
+    //handler for the start race button
     private class StartHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
@@ -148,6 +167,7 @@ public class HorseRace extends Application {
         }
     }
 
+    //handler for the reset race button
     private class ResetHandler implements EventHandler<ActionEvent> {
 
         @Override
@@ -157,17 +177,22 @@ public class HorseRace extends Application {
         }
     }
 
-    private class StopHandler implements EventHandler<ActionEvent> {
+    //handler for the exit application button
+    private class ExitHandler implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent actionEvent) {
             Platform.exit();
         }
     }
 
+
+    //utility function that return a random number in a range specified by the function parameters
     public int getRandomNumber(int min, int max) {
         return (int) ((Math.random() * (max - min)) + min);
     }
 
+
+    //animation class. draws and animates the horse
     private class Animate implements Runnable {
         int LENGTH_OF_TRACK = 450;
         GraphicsContext gc;
@@ -198,6 +223,8 @@ public class HorseRace extends Application {
             setWinner(this.horse);
         }
 
+        //clears the canvas and draws the horse in a new location as specified by the x-axis parameter in the Horse class.
+        //These operations are dispatched to run on the main thread through Platform.runLater().
         public void drawHorse() {
             if (Thread.currentThread().isInterrupted()) {
                 System.out.println(Thread.currentThread().getName());
@@ -210,6 +237,7 @@ public class HorseRace extends Application {
             Platform.runLater(draw);
         }
 
+        //updates the horses position along the x-axis
         public void moveHorse() throws InterruptedException {
             this.drawHorse();
             int distance = getRandomNumber(10, 30);

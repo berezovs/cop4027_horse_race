@@ -1,3 +1,10 @@
+
+/**
+ Student Name:Serghei Berezovschi
+ File Name:Horse.java
+ Project 3
+
+ */
 public class Horse {
     private String name = null;
     private boolean isWinner = false;
@@ -9,6 +16,7 @@ public class Horse {
         this.positionY = 0;
     }
 
+    //Getters and setters for the Horse class
     public String getName() {
         return this.name;
     }
